@@ -60,13 +60,13 @@ describe('scaleWorker', () => {
         minWorker: 12
       })
       scaler.doScale = jest.fn()
-      scaler.updateJobStats = jest.fn(() => ({}))
+      scaler.updateJobStats = jest.fn(() => ({ total: 100 }))
       // this is something exceed minWorker
 
       RedScale.getIdealWorkerTarget = jest.fn(() => 50)
       await scaler.scale()
       expect(scaler.doScale).toHaveBeenCalledTimes(1)
-      expect(scaler.doScale).toHaveBeenCalledWith(50)
+      expect(scaler.doScale).toHaveBeenCalledWith({ stats: { total: 100 }, scaleTo: 50 })
     })
   })
 

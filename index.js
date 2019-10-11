@@ -99,9 +99,9 @@ class RedScale {
   }
 
   async scale() {
-    const count = await this.getCurrentNumberOfJobs()
+    const stats = await this.getCurrentNumberOfJobs()
     const idealWorkerTarget = RedScale.getIdealWorkerTarget({
-      jobCount: count.total,
+      jobCount: stats.total,
       workerToJobRatio: this.workerToJobRatio,
       cpuPerMachine: this.cpuPerMachine,
       boostMinWorker: this.boostMinWorker,
@@ -110,8 +110,8 @@ class RedScale {
     })
 
     this.currentWorker = idealWorkerTarget
-    debug(`Total: ${count.total}, active/queue: ${count.active}/${count.inactive} => scale to ${this.currentWorker}`)
-    return this.doScale(this.currentWorker)
+    debug(`Total: ${stats.total}, active/queue: ${stats.active}/${stats.inactive} => scale to ${this.currentWorker}`)
+    return this.doScale({ stats, scaleTo: this.currentWorker })
   }
 
 
