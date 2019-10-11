@@ -1,6 +1,6 @@
 {
   "name": "red-scale",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,6 +9,7 @@
   "author": "Manoch Changsalak",
   "license": "ISC",
   "dependencies": {
-    "debug": "^4.1.1"
+    "debug": "^4.1.1",
+    "node-schedule": "^1.3.2"
   }
 }

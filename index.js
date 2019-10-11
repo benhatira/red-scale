@@ -1,4 +1,5 @@
-const debug = require('debug')('workerScaler')
+const schedule = require('node-schedule')
+const debug = require('debug')('red-scale')
 /**
  * Scale worker to half of total jobs in the system (active + inactive)
  * freeze it at half of max jobs, so that no job get shutdown before
@@ -17,7 +18,7 @@ const debug = require('debug')('workerScaler')
  * @returns
  */
 
-class WorkerScaler {
+class RedScale {
   /**
    *
    */
@@ -26,7 +27,8 @@ class WorkerScaler {
     cpuPerMachine = 1,
     boostMinWorker = 1,
     minWorker = 1,
-    maxWorker = 6
+    maxWorker = 6,
+    scaleInterval = 5000 // ms
   } = {}) {
     this.currentWorker = 0
     this.workerToJobRatio = workerToJobRatio
@@ -34,12 +36,13 @@ class WorkerScaler {
     this.boostMinWorker = boostMinWorker
     this.minWorker = minWorker
     this.maxWorker = maxWorker
+    this.scaleInterval = scaleInterval
 
     this.doScale = (scaleTo) => {
-      console.log(`!no doScale function to execute scaleTo(${scaleTo})`)
+      console.error(`!no doScale function to execute scaleTo(${scaleTo})`)
     }
     this.updateJobStats = () => {
-      console.log('!no updateJobStats function to execute')
+      console.error('!no updateJobStats function to execute')
       return {
         total: 0,
         inactive: 0,
@@ -62,7 +65,7 @@ class WorkerScaler {
     minWorker,
     maxWorker
   }) {
-    let workerTarget = WorkerScaler.ceilToNearest(jobCount, workerToJobRatio, cpuPerMachine)
+    let workerTarget = RedScale.ceilToNearest(jobCount, workerToJobRatio, cpuPerMachine)
 
     // 
     if (workerTarget < minWorker) {
@@ -97,7 +100,7 @@ class WorkerScaler {
 
   async scale() {
     const count = await this.getCurrentNumberOfJobs()
-    const idealWorkerTarget = WorkerScaler.getIdealWorkerTarget({
+    const idealWorkerTarget = RedScale.getIdealWorkerTarget({
       jobCount: count.total,
       workerToJobRatio: this.workerToJobRatio,
       cpuPerMachine: this.cpuPerMachine,
@@ -107,9 +110,24 @@ class WorkerScaler {
     })
 
     this.currentWorker = idealWorkerTarget
-    console.log(`Total: ${count.total}, active/queue: ${count.active}/${count.inactive} => scale to ${this.currentWorker}`)
+    debug(`Total: ${count.total}, active/queue: ${count.active}/${count.inactive} => scale to ${this.currentWorker}`)
     return this.doScale(this.currentWorker)
+  }
+
+
+  start() {
+    const everySecond = this.scaleInterval / 1000
+    const cronFormat = `*/${everySecond} * * * * *`
+    debug('register schedule ', cronFormat)
+    this.job = schedule.scheduleJob(cronFormat, async () => {
+      debug('start scaling')
+      return this.scale()
+    })
+  }
+
+  stop() {
+    this.job.cancel()
   }
 }
 
-module.exports = WorkerScaler
+module.exports = RedScale
