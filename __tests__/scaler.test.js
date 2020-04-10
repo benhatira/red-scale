@@ -1,7 +1,7 @@
 const RedScale = require('../index')
 
 describe('scaleWorker', () => {
-  describe(('getIdealWorkerTarget'), () => {
+  describe('getIdealWorkerTarget', () => {
     it('maintain at min_worker when (job_count / 2) < min_worker', () => {
       const args = {
         workerToJobRatio: 0.5,
@@ -10,9 +10,28 @@ describe('scaleWorker', () => {
         minWorker: 16,
         maxWorker: 2000
       }
-      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 5 }, args ))).toEqual(args.minWorker)
-      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 5 }, args ))).toEqual(args.minWorker)
+      // from ratio 5 => 2.5
+      // maximizeCPU => 0_(2.5)_16 = 16
+      // dont minuse fixUsed  because  2.5 < 16
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 5 }, args ))).toEqual(16)
     })
+
+
+    it('maintain at target - fixUsedCPU when workerTarget exceed CpuPerMachine', () => {
+      const args = {
+        workerToJobRatio: 0.5,
+        cpuPerMachine: 16,
+        boostMinWorker: 16,
+        fixUsedCpu: 4,
+        minWorker: 16,
+        maxWorker: 2000
+      }
+      // from ratio 40 => 20
+      // maximizeCPU => 16 -20- 32 => 32
+      // minuse fixUsed  32 - 4 = 28
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 40 }, args ))).toEqual(28)
+    })
+
 
     it('initial scale to boost_min_worker when min_worker < (job_count / 2) < min_boost_worker', () => {
       const args = {
@@ -22,8 +41,11 @@ describe('scaleWorker', () => {
         minWorker: 16,
         maxWorker: 2000
       }
+      // 33(0.5) => 17 | 17 => 160
       expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 33 }, args ))).toEqual(args.boostMinWorker)
+      // 200(0.5) => 100 | 100 => 160
       expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 200 }, args ))).toEqual(args.boostMinWorker)
+      // 300(0.5) => 150 | 150 => 160
       expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 300 }, args ))).toEqual(args.boostMinWorker)
     })
 
@@ -35,10 +57,26 @@ describe('scaleWorker', () => {
         minWorker: 16,
         maxWorker: 2000
       }
-      let nearestCeiling1 = RedScale.ceilToNearest(321, args.workerToJobRatio, args.cpuPerMachine)
-      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 321 }, args ))).toEqual(nearestCeiling1)
-      let nearestCeiling2 = RedScale.ceilToNearest(800, args.workerToJobRatio, args.cpuPerMachine)
-      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 800 }, args ))).toEqual(nearestCeiling2)
+
+      // 321(0.5) => 161 | 161 => 176
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 321 }, args ))).toEqual(176)
+      // 800(0.5) => 400 | 400 => 400(16 * 25)
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 800 }, args ))).toEqual(400)
+    })
+
+    it('scale to min_boost_worker < (job_count * 0.5) < max_worker  minus fixUsedCPU', () => {
+      const args = {
+        workerToJobRatio: 0.5,
+        cpuPerMachine: 16,
+        boostMinWorker: 32,
+        fixUsedCpu: 6,
+        minWorker: 16,
+        maxWorker: 2000
+      }
+      // 70(0.5) => 35 | 32_(35)_48 => 48 | 48 - 6 => 42
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 70 }, args ))).toEqual(42)
+      // 122(0.5) => 61 | 48_(61)_64 => 64 | 64 - 6 => 58
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 122 }, args ))).toEqual(58)
     })
 
     it('scale to max_worker when (job_count / 2) > max_worker', () => {
@@ -51,6 +89,18 @@ describe('scaleWorker', () => {
       }
       expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 4001 }, args ))).toEqual(args.maxWorker)
       expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 5000 }, args ))).toEqual(args.maxWorker)
+    })
+    it('scale to max_worker when (job_count / 2) > max_worker and minus used CPU if workerTarger more than CPU/machine', () => {
+      const args = {
+        workerToJobRatio: 0.5,
+        cpuPerMachine: 16,
+        fixUsedCpu: 4,
+        boostMinWorker: 160,
+        minWorker: 16,
+        maxWorker: 2000
+      }
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 4001 }, args ))).toEqual(args.maxWorker - 4)
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 5000 }, args ))).toEqual(args.maxWorker - 4)
     })
   })
 
@@ -92,7 +142,7 @@ describe('scaleWorker', () => {
       })
       scaler.scale = jest.fn()
       scaler.start()
-      await new Promise((r) => setTimeout(r, 3000))
+      await new Promise((r) => setTimeout(r, 3100))
       expect(scaler.scale).toHaveBeenCalledTimes(3)
     })
   })

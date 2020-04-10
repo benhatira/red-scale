@@ -1,7 +1,9 @@
 const RedScale = require('../index')
 
 
-const scaler = new RedScale()
+const scaler = new RedScale({
+  fixUsedCpu: 2
+})
 
 scaler.updateJobStats = async () => {
   return {

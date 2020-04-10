@@ -26,6 +26,7 @@ class RedScale {
     workerToJobRatio = 1,
     cpuPerMachine = 1,
     boostMinWorker = 1,
+    fixUsedCpu = 0, // numbers of CPU in this cluster which already used by other services
     minWorker = 1,
     maxWorker = 6,
     scaleInterval = 5000 // ms
@@ -33,6 +34,7 @@ class RedScale {
     this.currentWorker = 0
     this.workerToJobRatio = workerToJobRatio
     this.cpuPerMachine = cpuPerMachine
+    this.fixUsedCpu = fixUsedCpu
     this.boostMinWorker = boostMinWorker
     this.minWorker = minWorker
     this.maxWorker = maxWorker
@@ -61,6 +63,7 @@ class RedScale {
     jobCount,
     workerToJobRatio,
     cpuPerMachine,
+    fixUsedCpu = 0,
     boostMinWorker,
     minWorker,
     maxWorker
@@ -86,6 +89,9 @@ class RedScale {
       workerTarget = maxWorker
     }
 
+    if(workerTarget > cpuPerMachine) {
+      workerTarget -= fixUsedCpu
+    }
     return workerTarget
   }
 
@@ -104,6 +110,7 @@ class RedScale {
       jobCount: stats.total,
       workerToJobRatio: this.workerToJobRatio,
       cpuPerMachine: this.cpuPerMachine,
+      fixUsedCpu: this.fixUsedCpu,
       boostMinWorker: this.boostMinWorker,
       minWorker: this.minWorker,
       maxWorker: this.maxWorker
