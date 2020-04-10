@@ -89,7 +89,7 @@ class RedScale {
       workerTarget = maxWorker
     }
 
-    if(workerTarget > cpuPerMachine) {
+    if(workerTarget > cpuPerMachine - fixUsedCpu) {
       workerTarget -= fixUsedCpu
     }
     return workerTarget

@@ -16,6 +16,21 @@ describe('scaleWorker', () => {
       expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 5 }, args ))).toEqual(16)
     })
 
+    it('maintain at min_worker when (job_count / 2) < min_worker minus fixUsedCpu', () => {
+      const args = {
+        workerToJobRatio: 0.5,
+        cpuPerMachine: 16,
+        fixUsedCpu: 6,
+        boostMinWorker: 160,
+        minWorker: 16,
+        maxWorker: 2000
+      }
+      // from ratio 2 => 1
+      // maximizeCPU => 0_(1)_16 = 16
+      // minus fixUsedCpu  16 - 4 
+      expect(RedScale.getIdealWorkerTarget(Object.assign({ jobCount: 2 }, args ))).toEqual(10)
+    })
+
 
     it('maintain at target - fixUsedCPU when workerTarget exceed CpuPerMachine', () => {
       const args = {
