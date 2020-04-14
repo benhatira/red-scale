@@ -69,7 +69,7 @@ class RedScale {
     maxWorker
   }) {
     let workerTarget = RedScale.ceilToNearest(jobCount, workerToJobRatio, cpuPerMachine)
-
+    workerTarget -= fixUsedCpu
     // 
     if (workerTarget < minWorker) {
       workerTarget = minWorker
@@ -89,9 +89,6 @@ class RedScale {
       workerTarget = maxWorker
     }
 
-    if(workerTarget > cpuPerMachine - fixUsedCpu) {
-      workerTarget -= fixUsedCpu
-    }
     return workerTarget
   }
 
